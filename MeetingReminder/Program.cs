@@ -23,7 +23,8 @@ internal static class Program
             return;
         }
 
-        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        // DPI-Awareness wird bereits über app.manifest (dpiAwareness PerMonitorV2) gesetzt;
+        // ein zusätzlicher Application.SetHighDpiMode-Aufruf würde sich damit überschneiden (WFAC010).
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
