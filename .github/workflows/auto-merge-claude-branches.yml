@@ -38,7 +38,9 @@ jobs:
           echo "Merging '$BRANCH' into main"
           git fetch origin "$BRANCH"
 
-          if git merge --no-ff "origin/$BRANCH" -m "Merge branch '$BRANCH' into main"; then
+          # --allow-unrelated-histories: main started as an empty root commit,
+          # separate from the claude/* branches' own root commit.
+          if git merge --no-ff --allow-unrelated-histories "origin/$BRANCH" -m "Merge branch '$BRANCH' into main"; then
             git push origin HEAD:main
           else
             echo "::error::Merge conflict between '$BRANCH' and main. Please resolve manually."
