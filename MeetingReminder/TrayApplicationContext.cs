@@ -131,6 +131,12 @@ public sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+    /// <summary>
+    /// Öffentlicher Ausstiegspunkt für Aufrufer außerhalb des Tray-Menüs (z.B. Strg+C/Strg+Pause
+    /// im Terminal während der Entwicklung mit "dotnet run"). Muss auf dem UI-Thread laufen.
+    /// </summary>
+    public void RequestExit() => ExitApplication();
+
     private void ExitApplication()
     {
         _isExiting = true;

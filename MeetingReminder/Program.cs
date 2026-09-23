@@ -31,7 +31,25 @@ internal static class Program
         Application.ThreadException += (_, e) => LogException(e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => LogException(e.ExceptionObject as Exception);
 
-        Application.Run(new TrayApplicationContext());
+        // Explizit installieren statt uns auf den (lazy initialisierten) Standard-Kontext zu
+        // verlassen, damit das Marshalling unten garantiert funktioniert.
+        var uiContext = new WindowsFormsSynchronizationContext();
+        SynchronizationContext.SetSynchronizationContext(uiContext);
+
+        var context = new TrayApplicationContext();
+
+        // Bester Versuch für Strg+C/Strg+Pause beim Start über "dotnet run" im Terminal: falls das
+        // Signal den Prozess tatsächlich erreicht (nicht garantiert, da die App als reine GUI-App
+        // ohne eigenes Konsolenfenster läuft), fahren wir sauber über denselben Weg herunter wie
+        // über "Beenden" im Tray-Menü, statt den Prozess hart abzuschießen. Der Handler läuft auf
+        // einem separaten Thread, daher Marshalling über den UI-SynchronizationContext.
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            uiContext.Post(_ => context.RequestExit(), null);
+        };
+
+        Application.Run(context);
     }
 
     private static void LogException(Exception? exception)
