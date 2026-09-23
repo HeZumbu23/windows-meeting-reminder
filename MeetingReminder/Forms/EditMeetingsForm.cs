@@ -47,7 +47,11 @@ public sealed class EditMeetingsForm : Form
         ShowIcon = false;
         ShowInTaskbar = false;
 
-        _rows = new BindingList<MeetingRow>(meetings.Select(MeetingRow.FromMeeting).ToList());
+        var sortedMeetings = meetings
+            .OrderBy(m => MondayFirstIndex(m.Day))
+            .ThenBy(m => m.Hour)
+            .ThenBy(m => m.Minute);
+        _rows = new BindingList<MeetingRow>(sortedMeetings.Select(MeetingRow.FromMeeting).ToList());
 
         _grid = new DataGridView
         {
@@ -192,6 +196,9 @@ public sealed class EditMeetingsForm : Form
         DialogResult = DialogResult.OK;
         Close();
     }
+
+    /// <summary>0 = Montag ... 6 = Sonntag, damit die Terminliste in gewohnter Wochenreihenfolge sortiert.</summary>
+    private static int MondayFirstIndex(DayOfWeek day) => ((int)day + 6) % 7;
 
     private void ShowError(string message) =>
         MessageBox.Show(this, message, "Meeting Reminder", MessageBoxButtons.OK, MessageBoxIcon.Error);
