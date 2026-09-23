@@ -7,7 +7,8 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
 
 ## Funktionsumfang
 
-- **Tray-Icon** (rote Uhr) unten rechts neben der Systemuhr, kein Fenster beim Start.
+- **Tray-Icon** (rote Uhr) unten rechts neben der Systemuhr, kein Fenster beim
+  Start. Dasselbe Design zeigt auch die .exe selbst im Explorer/Taskleiste.
 - **Rechtsklick-Menü**: Termine bearbeiten, Termindatei im Explorer anzeigen,
   Autostart an/aus, Beenden. Doppelklick auf das Icon öffnet ebenfalls die
   Terminbearbeitung.
@@ -49,6 +50,7 @@ MeetingReminder.sln
 MeetingReminder/
   MeetingReminder.csproj      Projektdatei (.NET 8, WinForms, net8.0-windows)
   meetings.json                Terminplan (eingecheckt, siehe "Termine anpassen")
+  AppIcon.ico                  Icon der .exe (Explorer/Taskleiste), mehrere Auflösungen
   app.manifest                 DPI-Awareness-Manifest
   Program.cs                   Einstiegspunkt, Single-Instance-Schutz, Logging
   TrayApplicationContext.cs    Tray-Icon, Menü, Verdrahtung aller Teile
@@ -172,8 +174,13 @@ nächsten Start der App bzw. beim nächsten Öffnen des Bearbeiten-Dialogs
   keine Rolle – nach dem Aufwachen läuft der nächste reguläre Tick einfach
   weiter, ergänzt um eine 5-Minuten-Gnadenfrist für Termine, die genau
   während einer kurzen Standby-Phase fällig wurden.
-- **Tray-Icon wird zur Laufzeit gezeichnet** (kein `.ico`-Asset im Repo), um
-  keine Binärdatei pflegen zu müssen.
+- **Tray-Icon wird zur Laufzeit gezeichnet** statt aus einer Datei geladen,
+  damit die eigentliche Programmlogik ohne Binärdatei auskommt. Für das
+  Datei-Icon (Explorer, Taskleiste) liegt zusätzlich `AppIcon.ico` im Repo
+  und ist über `<ApplicationIcon>` in `MeetingReminder.csproj` eingebunden -
+  optisch identisches Design (rote Uhr), aber ein eigener, waschechter
+  Icon-Datensatz mit mehreren Auflösungen, wie Windows ihn für die .exe
+  selbst braucht.
 - **`meetings.json` liegt im Repo statt unter `%AppData%`**: `MeetingStore`
   sucht ausgehend vom Ausführungsverzeichnis nach oben nach
   `MeetingReminder.csproj` und legt die Datei im gefundenen Projektverzeichnis
