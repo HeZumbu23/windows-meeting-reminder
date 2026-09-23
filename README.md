@@ -21,16 +21,19 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
   Termin jede Woche am gewählten Wochentag. Bei Rhythmus "Alle 2 Wochen"
   wird zusätzlich ein Startdatum angegeben (z.B. `13.10.2026`) – ab dann
   feuert der Termin alle 14 Tage an diesem Wochentag.
-- **Vollbild-Popup** (rot, große Schrift) beim Erreichen eines Termins –
-  schließbar per Klick, ESC oder Enter, mit "5 Minuten später erinnern"
-  (Snooze) und automatischem Schließen nach 90 Sekunden.
+- **Vollbild-Popup** (rot, große Schrift) erscheint bereits **2 Minuten vor**
+  dem Termin (Kopfzeile zeigt "MEETING IN 2 MINUTEN!", darunter die
+  tatsächliche Startzeit) – schließbar per Klick, ESC oder Enter, mit
+  "5 Minuten später erinnern" (Snooze) und automatischem Schließen nach
+  90 Sekunden.
 - **Autostart** über den `HKCU\...\CurrentVersion\Run`-Registry-Schlüssel,
   umschaltbar direkt im Tray-Menü (kein Admin-Recht nötig).
 - **Zuverlässige Prüfung** alle 20 Sekunden mit 5-Minuten-Gnadenfrist ab dem
-  geplanten Zeitpunkt, damit ein Termin auch nach einer kurzen Standby-Phase
-  noch zuverlässig gemeldet wird. Es werden keine anwachsenden Datenstrukturen
-  gehalten (pro Tag zurückgesetzte "bereits ausgelöst"-Liste), damit die App
-  auch über Tage hinweg ohne Speicherzuwachs läuft.
+  Erinnerungszeitpunkt (Termin minus 2 Minuten Vorlauf), damit ein Termin
+  auch nach einer kurzen Standby-Phase noch zuverlässig gemeldet wird. Es
+  werden keine anwachsenden Datenstrukturen gehalten (pro Tag zurückgesetzte
+  "bereits ausgelöst"-Liste), damit die App auch über Tage hinweg ohne
+  Speicherzuwachs läuft.
 - **Eine Instanz gleichzeitig**: Ein zweiter Start (z.B. durch Autostart und
   manuellen Doppelklick) zeigt nur einen Hinweis und beendet sich sofort.
 - **Sauberes Beenden**: "Beenden" im Tray-Menü entfernt das Icon und stoppt
