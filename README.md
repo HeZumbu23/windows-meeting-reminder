@@ -11,10 +11,14 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
 - **Rechtsklick-Menü**: Termine bearbeiten, Termindatei im Explorer anzeigen,
   Autostart an/aus, Beenden. Doppelklick auf das Icon öffnet ebenfalls die
   Terminbearbeitung.
-- **Terminverwaltung** über einen Tabellen-Dialog (Wochentag, Uhrzeit, Titel);
-  die Daten liegen zusätzlich als lesbare JSON-Datei unter
+- **Terminverwaltung** über einen Tabellen-Dialog (Wochentag, Uhrzeit,
+  Rhythmus, Titel); die Daten liegen zusätzlich als lesbare JSON-Datei unter
   `%AppData%\MeetingReminder\meetings.json` und können bei Bedarf auch direkt
   editiert werden.
+- **Wöchentliche oder 2-wöchentliche Termine**: Standardmäßig feuert ein
+  Termin jede Woche am gewählten Wochentag. Bei Rhythmus "Alle 2 Wochen"
+  wird zusätzlich ein Startdatum angegeben (z.B. `13.10.2026`) – ab dann
+  feuert der Termin alle 14 Tage an diesem Wochentag.
 - **Vollbild-Popup** (rot, große Schrift) beim Erreichen eines Termins –
   schließbar per Klick, ESC oder Enter, mit "5 Minuten später erinnern"
   (Snooze) und automatischem Schließen nach 90 Sekunden.
@@ -39,7 +43,7 @@ MeetingReminder/
   app.manifest                 DPI-Awareness-Manifest
   Program.cs                   Einstiegspunkt, Single-Instance-Schutz, Logging
   TrayApplicationContext.cs    Tray-Icon, Menü, Verdrahtung aller Teile
-  Models/Meeting.cs            Termin-Datenmodell (Wochentag, Uhrzeit, Titel)
+  Models/Meeting.cs             Termin-Datenmodell (Wochentag, Uhrzeit, Titel, Rhythmus)
   Services/MeetingStore.cs     Laden/Speichern der meetings.json
   Services/ReminderScheduler.cs Polling-Timer, Fälligkeitsprüfung, Snooze
   Services/AutostartManager.cs Registry-Autostart an/aus
@@ -93,18 +97,33 @@ Wochentag per Dropdown wählen, Uhrzeit im Format `HH:mm` eintragen, Titel
 eingeben, mit "Speichern" übernehmen. Eine leere Zeile am Ende der Tabelle
 legt automatisch einen neuen Termin an.
 
+Für einen **2-wöchentlichen Termin**: bei "Rhythmus" → "Alle 2 Wochen"
+wählen und im Feld "Ab Datum" das erste Vorkommen im Format `TT.MM.JJJJ`
+eintragen (z.B. `13.10.2026`). Der Wochentag wird dann automatisch aus
+diesem Datum übernommen; ab diesem Tag feuert der Termin alle 14 Tage.
+
 Alternativ über **"Termindatei im Explorer anzeigen"** direkt die Datei
 `meetings.json` mit einem Texteditor bearbeiten, z.B.:
 
 ```json
 [
   { "Day": "Monday", "Hour": 9, "Minute": 0, "Title": "Daily Standup" },
-  { "Day": "Wednesday", "Hour": 15, "Minute": 0, "Title": "Sprint Review" }
+  { "Day": "Wednesday", "Hour": 15, "Minute": 0, "Title": "Sprint Review" },
+  {
+    "Day": "Thursday",
+    "Hour": 14,
+    "Minute": 0,
+    "Title": "Retro",
+    "IntervalWeeks": 2,
+    "StartDate": "2026-10-01"
+  }
 ]
 ```
 
-Änderungen an der Datei werden beim nächsten Start der App bzw. beim
-nächsten Öffnen des Bearbeiten-Dialogs übernommen.
+`IntervalWeeks` fehlt bzw. ist `1` für ganz normale wöchentliche Termine;
+`StartDate` wird dann ignoriert. Änderungen an der Datei werden beim
+nächsten Start der App bzw. beim nächsten Öffnen des Bearbeiten-Dialogs
+übernommen.
 
 ## Design-Entscheidungen (Kontext für spätere Änderungen)
 

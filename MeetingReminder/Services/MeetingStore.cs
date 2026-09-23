@@ -67,5 +67,14 @@ public sealed class MeetingStore
         new Meeting { Day = DayOfWeek.Wednesday, Hour = 15, Minute = 0, Title = "Sprint Review" },
         new Meeting { Day = DayOfWeek.Thursday, Hour = 9, Minute = 0, Title = "Daily Standup" },
         new Meeting { Day = DayOfWeek.Friday, Hour = 9, Minute = 0, Title = "Daily Standup" },
+        new Meeting
+        {
+            Day = DayOfWeek.Thursday,
+            Hour = 14,
+            Minute = 0,
+            Title = "Retro (Beispiel: alle 2 Wochen)",
+            IntervalWeeks = 2,
+            StartDate = new DateOnly(2026, 10, 1),
+        },
     ];
 }

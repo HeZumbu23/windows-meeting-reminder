@@ -84,6 +84,11 @@ public sealed class ReminderScheduler
                 continue;
             }
 
+            if (meeting.IntervalWeeks > 1 && !IsDueThisInterval(meeting, now))
+            {
+                continue;
+            }
+
             var scheduledAt = now.Date + meeting.TimeOfDay;
             if (now < scheduledAt || now > scheduledAt + GraceWindow)
             {
@@ -103,6 +108,23 @@ public sealed class ReminderScheduler
         {
             MeetingsDue?.Invoke(this, due);
         }
+    }
+
+    private static bool IsDueThisInterval(Meeting meeting, DateTime now)
+    {
+        if (meeting.StartDate is not { } startDate)
+        {
+            return false;
+        }
+
+        var today = DateOnly.FromDateTime(now);
+        if (startDate > today)
+        {
+            return false;
+        }
+
+        var daysSinceStart = today.DayNumber - startDate.DayNumber;
+        return daysSinceStart % (7 * meeting.IntervalWeeks) == 0;
     }
 
     private sealed record SnoozedReminder(Meeting Meeting, DateTime FireAt);
