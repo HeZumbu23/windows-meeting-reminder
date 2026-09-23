@@ -12,9 +12,12 @@ namespace MeetingReminder.Services;
 /// </summary>
 public sealed class ReminderScheduler
 {
+    /// <summary>Wie lange vor dem eigentlichen Termin das Popup erscheint.</summary>
+    private static readonly TimeSpan LeadTime = TimeSpan.FromMinutes(2);
+
     /// <summary>
-    /// Wie lange nach dem geplanten Zeitpunkt ein Termin noch als "gerade fällig" gilt.
-    /// Fängt kurze Standby-Phasen um den Termin herum ab.
+    /// Wie lange nach dem geplanten Erinnerungszeitpunkt (Termin minus <see cref="LeadTime"/>)
+    /// ein Termin noch als "gerade fällig" gilt. Fängt kurze Standby-Phasen ab.
     /// </summary>
     private static readonly TimeSpan GraceWindow = TimeSpan.FromMinutes(5);
 
@@ -90,7 +93,8 @@ public sealed class ReminderScheduler
             }
 
             var scheduledAt = now.Date + meeting.TimeOfDay;
-            if (now < scheduledAt || now > scheduledAt + GraceWindow)
+            var reminderAt = scheduledAt - LeadTime;
+            if (now < reminderAt || now > reminderAt + GraceWindow)
             {
                 continue;
             }

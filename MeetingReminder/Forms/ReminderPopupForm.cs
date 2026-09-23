@@ -52,6 +52,7 @@ public sealed class ReminderPopupForm : Form
     {
         var titleText = string.Join(Environment.NewLine, dueMeetings.Select(m => m.Title));
         var timeText = $"{dueMeetings[0].Hour:D2}:{dueMeetings[0].Minute:D2} Uhr";
+        var headerText = BuildHeaderText(dueMeetings[0]);
 
         var layout = new TableLayoutPanel
         {
@@ -67,7 +68,7 @@ public sealed class ReminderPopupForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44f));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
-        var headerLabel = CreateLabel("MEETING JETZT!", 44f, FontStyle.Bold);
+        var headerLabel = CreateLabel(headerText, 44f, FontStyle.Bold);
         var titleLabel = CreateLabel(titleText, 64f, FontStyle.Bold);
         var timeLabel = CreateLabel(timeText, 30f, FontStyle.Regular);
 
@@ -110,6 +111,26 @@ public sealed class ReminderPopupForm : Form
         }
 
         return layout;
+    }
+
+    /// <summary>
+    /// Errechnet den Kopfzeilentext aus dem tatsächlichen Abstand zur Terminzeit, statt fest
+    /// "JETZT" anzunehmen - passt sich so sowohl dem üblichen Vorlauf (siehe
+    /// <c>ReminderScheduler.LeadTime</c>) als auch einer per Snooze verschobenen, ggf. bereits
+    /// laufenden Erinnerung an.
+    /// </summary>
+    private static string BuildHeaderText(Meeting meeting)
+    {
+        var now = DateTime.Now;
+        var scheduledAt = now.Date + meeting.TimeOfDay;
+        var minutesUntil = (int)Math.Round((scheduledAt - now).TotalMinutes, MidpointRounding.AwayFromZero);
+
+        return minutesUntil switch
+        {
+            <= 0 => "MEETING JETZT!",
+            1 => "MEETING IN 1 MINUTE!",
+            _ => $"MEETING IN {minutesUntil} MINUTEN!",
+        };
     }
 
     private Label CreateLabel(string text, float fontSize, FontStyle style) => new()
