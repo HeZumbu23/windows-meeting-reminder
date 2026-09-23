@@ -1,0 +1,47 @@
+name: Auto-merge claude/* branches into main
+
+# Merged jeden Push auf einen claude/...-Branch sofort per Merge-Commit nach main.
+# Kein Pull Request, kein Warten auf Checks - bewusst so gewaehlt fuer schnelle
+# Iteration. Der Quell-Branch bleibt danach bestehen (wird nicht geloescht).
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+permissions:
+  contents: write
+
+# Serialisiert Merges nach main, falls mehrere claude/...-Branches gleichzeitig pushen.
+concurrency:
+  group: auto-merge-into-main
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge branch into main
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Merging '$BRANCH' into main"
+          git fetch origin "$BRANCH"
+
+          if git merge --no-ff "origin/$BRANCH" -m "Merge branch '$BRANCH' into main"; then
+            git push origin HEAD:main
+          else
+            echo "::error::Merge conflict between '$BRANCH' and main. Please resolve manually."
+            git merge --abort
+            exit 1
+          fi
