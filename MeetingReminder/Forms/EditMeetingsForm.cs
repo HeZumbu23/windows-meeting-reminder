@@ -26,13 +26,19 @@ public sealed class EditMeetingsForm : Form
         new(DayOfWeek.Sunday, "Sonntag"),
     ];
 
+    private static readonly IntervalOption[] IntervalOptions =
+    [
+        new(1, "Jede Woche"),
+        new(2, "Alle 2 Wochen"),
+    ];
+
     private readonly BindingList<MeetingRow> _rows;
     private readonly DataGridView _grid;
 
     public EditMeetingsForm(IEnumerable<Meeting> meetings)
     {
         Text = "Termine bearbeiten";
-        Width = 640;
+        Width = 860;
         Height = 480;
         StartPosition = FormStartPosition.CenterScreen;
         MinimizeBox = false;
@@ -68,7 +74,24 @@ public sealed class EditMeetingsForm : Form
             DataPropertyName = nameof(MeetingRow.Time),
             HeaderText = "Uhrzeit (HH:mm)",
             Name = "Time",
-            Width = 130,
+            Width = 110,
+        });
+        _grid.Columns.Add(new DataGridViewComboBoxColumn
+        {
+            DataPropertyName = nameof(MeetingRow.IntervalWeeks),
+            HeaderText = "Rhythmus",
+            Name = "IntervalWeeks",
+            DataSource = IntervalOptions,
+            DisplayMember = nameof(IntervalOption.Label),
+            ValueMember = nameof(IntervalOption.Weeks),
+            Width = 120,
+        });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(MeetingRow.StartDateText),
+            HeaderText = "Ab Datum (bei 2-wöch.)",
+            Name = "StartDate",
+            Width = 150,
         });
         _grid.Columns.Add(new DataGridViewTextBoxColumn
         {
@@ -80,9 +103,11 @@ public sealed class EditMeetingsForm : Form
 
         var hintLabel = new Label
         {
-            Text = "Wochentag, Uhrzeit (z.B. 09:00) und Titel eintragen. Leere Zeile am Ende = neuer Termin.",
+            Text = "Wochentag, Uhrzeit, Rhythmus und Titel eintragen. Bei \"Alle 2 Wochen\" zusätzlich das erste " +
+                   "Datum (TT.MM.JJJJ) eintragen - der Wochentag wird dann daraus übernommen. Leere Zeile am " +
+                   "Ende = neuer Termin.",
             Dock = DockStyle.Top,
-            Height = 30,
+            Height = 46,
             Padding = new Padding(8, 8, 8, 0),
         };
 
@@ -130,21 +155,36 @@ public sealed class EditMeetingsForm : Form
 
             if (!TryParseTime(row.Time, out var time))
             {
-                MessageBox.Show(
-                    this,
-                    $"Ungültige Uhrzeit '{row.Time}' bei Termin '{row.Title}'. Bitte Format HH:mm verwenden (z.B. 09:00).",
-                    "Meeting Reminder",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                ShowError($"Ungültige Uhrzeit '{row.Time}' bei Termin '{row.Title}'. Bitte Format HH:mm verwenden (z.B. 09:00).");
                 return;
+            }
+
+            var day = row.Day;
+            DateOnly? startDate = null;
+            var intervalWeeks = Math.Max(1, row.IntervalWeeks);
+
+            if (intervalWeeks > 1)
+            {
+                if (!TryParseDate(row.StartDateText, out var parsedDate))
+                {
+                    ShowError(
+                        $"Ungültiges Startdatum '{row.StartDateText}' bei Termin '{row.Title}'. " +
+                        "Bitte Format TT.MM.JJJJ verwenden (z.B. 13.10.2026).");
+                    return;
+                }
+
+                startDate = parsedDate;
+                day = parsedDate.DayOfWeek;
             }
 
             result.Add(new Meeting
             {
-                Day = row.Day,
+                Day = day,
                 Hour = time.Hours,
                 Minute = time.Minutes,
                 Title = row.Title.Trim(),
+                IntervalWeeks = intervalWeeks,
+                StartDate = startDate,
             });
         }
 
@@ -152,6 +192,9 @@ public sealed class EditMeetingsForm : Form
         DialogResult = DialogResult.OK;
         Close();
     }
+
+    private void ShowError(string message) =>
+        MessageBox.Show(this, message, "Meeting Reminder", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
     private static bool TryParseTime(string text, out TimeSpan time)
     {
@@ -162,7 +205,16 @@ public sealed class EditMeetingsForm : Form
                 && time < TimeSpan.FromDays(1));
     }
 
+    private static bool TryParseDate(string text, out DateOnly date)
+    {
+        text = text.Trim();
+        return DateOnly.TryParseExact(text, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out date)
+            || DateOnly.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+    }
+
     private sealed record DayOption(DayOfWeek Day, string Label);
+
+    private sealed record IntervalOption(int Weeks, string Label);
 
     private sealed class MeetingRow
     {
@@ -172,11 +224,17 @@ public sealed class EditMeetingsForm : Form
 
         public string Title { get; set; } = string.Empty;
 
+        public int IntervalWeeks { get; set; } = 1;
+
+        public string StartDateText { get; set; } = string.Empty;
+
         public static MeetingRow FromMeeting(Meeting meeting) => new()
         {
             Day = meeting.Day,
             Time = $"{meeting.Hour:D2}:{meeting.Minute:D2}",
             Title = meeting.Title,
+            IntervalWeeks = meeting.IntervalWeeks,
+            StartDateText = meeting.StartDate?.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture) ?? string.Empty,
         };
     }
 }
