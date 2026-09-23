@@ -8,11 +8,16 @@ using MeetingReminder.Models;
 namespace MeetingReminder.Services;
 
 /// <summary>
-/// Liest und schreibt die Terminliste als JSON-Datei unter %AppData%\MeetingReminder.
-/// Die Datei kann bei Bedarf auch von Hand editiert werden (Tray-Menü "Termindatei anzeigen").
+/// Liest und schreibt die Terminliste als JSON-Datei "meetings.json" im Repository-Hauptverzeichnis
+/// (neben MeetingReminder.sln), damit sie sich wie normaler Quellcode einchecken lässt. Läuft die
+/// .exe eigenständig ohne umgebendes Repository (z.B. nach "dotnet publish" an einen anderen Ort
+/// kopiert), liegt die Datei stattdessen neben der .exe. Die Datei kann bei Bedarf auch von Hand
+/// editiert werden (Tray-Menü "Termindatei anzeigen").
 /// </summary>
 public sealed class MeetingStore
 {
+    private const string SolutionFileName = "MeetingReminder.sln";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -21,11 +26,7 @@ public sealed class MeetingStore
 
     public MeetingStore()
     {
-        var dataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "MeetingReminder");
-        Directory.CreateDirectory(dataDirectory);
-        FilePath = Path.Combine(dataDirectory, "meetings.json");
+        FilePath = Path.Combine(ResolveDataDirectory(), "meetings.json");
     }
 
     public string FilePath { get; }
@@ -57,6 +58,19 @@ public sealed class MeetingStore
     {
         var json = JsonSerializer.Serialize(meetings, JsonOptions);
         File.WriteAllText(FilePath, json);
+    }
+
+    private static string ResolveDataDirectory()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            if (dir.GetFiles(SolutionFileName).Length > 0)
+            {
+                return dir.FullName;
+            }
+        }
+
+        return AppContext.BaseDirectory;
     }
 
     private static List<Meeting> CreateDefaultMeetings() =>

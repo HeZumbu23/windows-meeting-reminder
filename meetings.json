@@ -1,0 +1,58 @@
+[
+  {
+    "Day": "Monday",
+    "Hour": 9,
+    "Minute": 0,
+    "Title": "Daily Standup",
+    "IntervalWeeks": 1,
+    "StartDate": null
+  },
+  {
+    "Day": "Tuesday",
+    "Hour": 9,
+    "Minute": 0,
+    "Title": "Daily Standup",
+    "IntervalWeeks": 1,
+    "StartDate": null
+  },
+  {
+    "Day": "Wednesday",
+    "Hour": 9,
+    "Minute": 0,
+    "Title": "Daily Standup",
+    "IntervalWeeks": 1,
+    "StartDate": null
+  },
+  {
+    "Day": "Wednesday",
+    "Hour": 15,
+    "Minute": 0,
+    "Title": "Sprint Review",
+    "IntervalWeeks": 1,
+    "StartDate": null
+  },
+  {
+    "Day": "Thursday",
+    "Hour": 9,
+    "Minute": 0,
+    "Title": "Daily Standup",
+    "IntervalWeeks": 1,
+    "StartDate": null
+  },
+  {
+    "Day": "Friday",
+    "Hour": 9,
+    "Minute": 0,
+    "Title": "Daily Standup",
+    "IntervalWeeks": 1,
+    "StartDate": null
+  },
+  {
+    "Day": "Thursday",
+    "Hour": 14,
+    "Minute": 0,
+    "Title": "Retro (Beispiel: alle 2 Wochen)",
+    "IntervalWeeks": 2,
+    "StartDate": "2026-10-01"
+  }
+]
