@@ -13,8 +13,8 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
   Terminbearbeitung.
 - **Terminverwaltung** über einen Tabellen-Dialog (Wochentag, Uhrzeit,
   Rhythmus, Titel); die Daten liegen zusätzlich als lesbare JSON-Datei
-  `meetings.json` im Repository-Hauptverzeichnis (neben `MeetingReminder.sln`)
-  und können bei Bedarf auch direkt editiert werden. Die Datei ist bewusst
+  `MeetingReminder/meetings.json` (neben `MeetingReminder.csproj`) und können
+  bei Bedarf auch direkt editiert werden. Die Datei ist bewusst
   **eingecheckt** - Terminänderungen lassen sich damit ganz normal per
   `git diff`/`git commit` nachvollziehen und versionieren.
 - **Wöchentliche oder 2-wöchentliche Termine**: Standardmäßig feuert ein
@@ -43,14 +43,14 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
 
 ```
 MeetingReminder.sln
-meetings.json                  Terminplan (eingecheckt, siehe "Termine anpassen")
 MeetingReminder/
   MeetingReminder.csproj      Projektdatei (.NET 8, WinForms, net8.0-windows)
+  meetings.json                Terminplan (eingecheckt, siehe "Termine anpassen")
   app.manifest                 DPI-Awareness-Manifest
   Program.cs                   Einstiegspunkt, Single-Instance-Schutz, Logging
   TrayApplicationContext.cs    Tray-Icon, Menü, Verdrahtung aller Teile
   Models/Meeting.cs             Termin-Datenmodell (Wochentag, Uhrzeit, Titel, Rhythmus)
-  Services/MeetingStore.cs      Laden/Speichern der meetings.json (Repo-Hauptverzeichnis)
+  Services/MeetingStore.cs      Laden/Speichern der meetings.json (Projektverzeichnis)
   Services/ReminderScheduler.cs Polling-Timer, Fälligkeitsprüfung, Snooze
   Services/AutostartManager.cs Registry-Autostart an/aus
   Services/TrayIconFactory.cs  Zeichnet das Tray-Icon zur Laufzeit
@@ -117,11 +117,11 @@ festen Ort liegen bleiben, z.B. `C:\Tools\MeetingReminder\`).
 
 Wird die veröffentlichte .exe an einen Ort **außerhalb** dieses Repositories
 kopiert (z.B. nach `C:\Tools\MeetingReminder\`), findet sie dort kein
-`MeetingReminder.sln` mehr und legt `meetings.json` stattdessen direkt neben
-sich selbst ab - dann eben nicht mehr eingecheckt, sondern wie eine normale
-lokale Konfigurationsdatei. Für den eingecheckten Terminplan die App also
-direkt aus dem Repository-Checkout heraus bauen/starten (`dotnet run` bzw.
-die .exe aus `bin\...\` heraus), nicht an einen anderen Ort kopieren.
+`MeetingReminder.csproj` mehr und legt `meetings.json` stattdessen direkt
+neben sich selbst ab - dann eben nicht mehr eingecheckt, sondern wie eine
+normale lokale Konfigurationsdatei. Für den eingecheckten Terminplan die App
+also direkt aus dem Repository-Checkout heraus bauen/starten (`dotnet run`
+bzw. die .exe aus `bin\...\` heraus), nicht an einen anderen Ort kopieren.
 
 ## Termine anpassen
 
@@ -136,8 +136,7 @@ eintragen (z.B. `13.10.2026`). Der Wochentag wird dann automatisch aus
 diesem Datum übernommen; ab diesem Tag feuert der Termin alle 14 Tage.
 
 Alternativ über **"Termindatei im Explorer anzeigen"** direkt die Datei
-`meetings.json` im Repository-Hauptverzeichnis mit einem Texteditor
-bearbeiten, z.B.:
+`MeetingReminder/meetings.json` mit einem Texteditor bearbeiten, z.B.:
 
 ```json
 [
@@ -174,10 +173,10 @@ nächsten Start der App bzw. beim nächsten Öffnen des Bearbeiten-Dialogs
   keine Binärdatei pflegen zu müssen.
 - **`meetings.json` liegt im Repo statt unter `%AppData%`**: `MeetingStore`
   sucht ausgehend vom Ausführungsverzeichnis nach oben nach
-  `MeetingReminder.sln` und legt die Datei dort ab, damit Terminänderungen
-  über die App direkt als Git-Diff sichtbar und eincheckbar sind. Ohne
-  gefundenes `.sln` (eigenständig veröffentlichte .exe) fällt es auf das
-  Verzeichnis neben der .exe zurück.
+  `MeetingReminder.csproj` und legt die Datei im gefundenen Projektverzeichnis
+  ab, damit Terminänderungen über die App direkt als Git-Diff sichtbar und
+  eincheckbar sind. Ohne gefundene `.csproj` (eigenständig veröffentlichte
+  .exe) fällt es auf das Verzeichnis neben der .exe zurück.
 - Die alte PowerShell/Aufgabenplanung-Lösung (`meetings.csv`, `reminder.ps1`,
   `setup_task.ps1`, `remove_task.ps1`) ist **nicht** Teil dieses Repos – das
   Repository war zu Beginn dieser Aufgabe leer, es gab daher nichts zu

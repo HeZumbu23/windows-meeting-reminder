@@ -8,15 +8,15 @@ using MeetingReminder.Models;
 namespace MeetingReminder.Services;
 
 /// <summary>
-/// Liest und schreibt die Terminliste als JSON-Datei "meetings.json" im Repository-Hauptverzeichnis
-/// (neben MeetingReminder.sln), damit sie sich wie normaler Quellcode einchecken lässt. Läuft die
+/// Liest und schreibt die Terminliste als JSON-Datei "meetings.json" im Projektverzeichnis
+/// (neben MeetingReminder.csproj), damit sie sich wie normaler Quellcode einchecken lässt. Läuft die
 /// .exe eigenständig ohne umgebendes Repository (z.B. nach "dotnet publish" an einen anderen Ort
 /// kopiert), liegt die Datei stattdessen neben der .exe. Die Datei kann bei Bedarf auch von Hand
 /// editiert werden (Tray-Menü "Termindatei anzeigen").
 /// </summary>
 public sealed class MeetingStore
 {
-    private const string SolutionFileName = "MeetingReminder.sln";
+    private const string ProjectFileName = "MeetingReminder.csproj";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -64,7 +64,7 @@ public sealed class MeetingStore
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
         {
-            if (dir.GetFiles(SolutionFileName).Length > 0)
+            if (dir.GetFiles(ProjectFileName).Length > 0)
             {
                 return dir.FullName;
             }
