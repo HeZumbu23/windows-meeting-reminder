@@ -13,7 +13,7 @@ namespace MeetingReminder.Services;
 public sealed class ReminderScheduler
 {
     /// <summary>Wie lange vor dem eigentlichen Termin das Popup erscheint.</summary>
-    private static readonly TimeSpan LeadTime = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan LeadTime = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Wie lange nach dem geplanten Erinnerungszeitpunkt (Termin minus <see cref="LeadTime"/>)
