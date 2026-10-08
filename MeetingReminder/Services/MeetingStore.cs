@@ -16,8 +16,6 @@ namespace MeetingReminder.Services;
 /// </summary>
 public sealed class MeetingStore
 {
-    private const string ProjectFileName = "MeetingReminder.csproj";
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -26,7 +24,7 @@ public sealed class MeetingStore
 
     public MeetingStore()
     {
-        FilePath = Path.Combine(ResolveDataDirectory(), "meetings.json");
+        FilePath = Path.Combine(DataDirectoryResolver.Resolve(), "meetings.json");
     }
 
     public string FilePath { get; }
@@ -58,19 +56,6 @@ public sealed class MeetingStore
     {
         var json = JsonSerializer.Serialize(meetings, JsonOptions);
         File.WriteAllText(FilePath, json);
-    }
-
-    private static string ResolveDataDirectory()
-    {
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-        {
-            if (dir.GetFiles(ProjectFileName).Length > 0)
-            {
-                return dir.FullName;
-            }
-        }
-
-        return AppContext.BaseDirectory;
     }
 
     private static List<Meeting> CreateDefaultMeetings() =>

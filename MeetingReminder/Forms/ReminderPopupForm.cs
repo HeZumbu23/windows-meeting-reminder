@@ -8,21 +8,31 @@ using MeetingReminder.Models;
 namespace MeetingReminder.Forms;
 
 /// <summary>
-/// Großes, auffälliges Vollbild-Popup, das erscheint, sobald ein Termin fällig ist.
-/// Schließbar per Klick, ESC oder Enter; alternativ per "Snooze"-Button 5 Minuten verschieben.
+/// Großes, auffälliges Vollbild-Popup, das erscheint, sobald ein Termin fällig ist. Die Farbe
+/// richtet sich nach der Erinnerungsstufe: grün für den frühen Hinweis, rot für den dringlichen
+/// kurz vor dem Termin. Schließbar per Klick, ESC oder Enter; alternativ per "Snooze"-Button
+/// 5 Minuten verschieben.
 /// </summary>
 public sealed class ReminderPopupForm : Form
 {
     private const int AutoCloseAfterMilliseconds = 90_000;
 
+    private static readonly Color RedBackColor = Color.FromArgb(200, 0, 0);
+    private static readonly Color RedHintColor = Color.FromArgb(255, 225, 225);
+    private static readonly Color GreenBackColor = Color.FromArgb(0, 140, 70);
+    private static readonly Color GreenHintColor = Color.FromArgb(225, 255, 235);
+
     private readonly System.Windows.Forms.Timer _autoCloseTimer;
 
-    public ReminderPopupForm(IReadOnlyList<Meeting> dueMeetings)
+    public ReminderPopupForm(IReadOnlyList<Meeting> dueMeetings, ReminderStage stage)
     {
         if (dueMeetings.Count == 0)
         {
             throw new ArgumentException("Es muss mindestens ein Termin übergeben werden.", nameof(dueMeetings));
         }
+
+        var backColor = stage == ReminderStage.Red ? RedBackColor : GreenBackColor;
+        var hintColor = stage == ReminderStage.Red ? RedHintColor : GreenHintColor;
 
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
@@ -31,11 +41,11 @@ public sealed class ReminderPopupForm : Form
         TopMost = true;
         ShowInTaskbar = false;
         KeyPreview = true;
-        BackColor = Color.FromArgb(200, 0, 0);
+        BackColor = backColor;
         Cursor = Cursors.Hand;
         Text = "Meeting Reminder";
 
-        var layout = BuildLayout(dueMeetings);
+        var layout = BuildLayout(dueMeetings, backColor, hintColor);
         Controls.Add(layout);
 
         _autoCloseTimer = new System.Windows.Forms.Timer { Interval = AutoCloseAfterMilliseconds };
@@ -48,7 +58,7 @@ public sealed class ReminderPopupForm : Form
     /// <summary>Wird nach dem Schließen ausgewertet, um ggf. eine erneute Erinnerung einzuplanen.</summary>
     public bool SnoozeRequested { get; private set; }
 
-    private TableLayoutPanel BuildLayout(IReadOnlyList<Meeting> dueMeetings)
+    private TableLayoutPanel BuildLayout(IReadOnlyList<Meeting> dueMeetings, Color backColor, Color hintColor)
     {
         var titleText = string.Join(Environment.NewLine, dueMeetings.Select(m => m.Title));
         var timeText = $"{dueMeetings[0].Hour:D2}:{dueMeetings[0].Minute:D2} Uhr";
@@ -59,7 +69,7 @@ public sealed class ReminderPopupForm : Form
             Dock = DockStyle.Fill,
             RowCount = 5,
             ColumnCount = 1,
-            BackColor = BackColor,
+            BackColor = backColor,
         };
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 140f));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
@@ -76,7 +86,7 @@ public sealed class ReminderPopupForm : Form
             "Klicken, ESC oder Enter zum Schließen",
             13f,
             FontStyle.Regular);
-        hintLabel.ForeColor = Color.FromArgb(255, 225, 225);
+        hintLabel.ForeColor = hintColor;
 
         var snoozeButton = new Button
         {
@@ -86,7 +96,7 @@ public sealed class ReminderPopupForm : Form
             Margin = new Padding(200, 8, 200, 8),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
-            ForeColor = Color.FromArgb(200, 0, 0),
+            ForeColor = backColor,
             Cursor = Cursors.Hand,
         };
         snoozeButton.FlatAppearance.BorderSize = 0;
@@ -115,22 +125,30 @@ public sealed class ReminderPopupForm : Form
 
     /// <summary>
     /// Errechnet den Kopfzeilentext aus dem tatsächlichen Abstand zur Terminzeit, statt fest
-    /// "JETZT" anzunehmen - passt sich so sowohl dem üblichen Vorlauf (siehe
-    /// <c>ReminderScheduler.LeadTime</c>) als auch einer per Snooze verschobenen, ggf. bereits
-    /// laufenden Erinnerung an.
+    /// "JETZT" anzunehmen - passt sich so sowohl den konfigurierbaren Vorlaufzeiten (siehe
+    /// <see cref="ReminderSettings"/>) als auch einer per Snooze verschobenen, ggf. bereits
+    /// laufenden Erinnerung an. Unter einer Minute wird in Sekunden statt Minuten gezählt, damit
+    /// z.B. der standardmäßig 30 Sekunden vorher feuernde rote Hinweis nicht ungenau auf
+    /// "1 Minute" aufgerundet wird.
     /// </summary>
     private static string BuildHeaderText(Meeting meeting)
     {
         var now = DateTime.Now;
         var scheduledAt = now.Date + meeting.TimeOfDay;
-        var minutesUntil = (int)Math.Round((scheduledAt - now).TotalMinutes, MidpointRounding.AwayFromZero);
+        var remainingSeconds = (int)Math.Round((scheduledAt - now).TotalSeconds, MidpointRounding.AwayFromZero);
 
-        return minutesUntil switch
+        if (remainingSeconds <= 0)
         {
-            <= 0 => "MEETING JETZT!",
-            1 => "MEETING IN 1 MINUTE!",
-            _ => $"MEETING IN {minutesUntil} MINUTEN!",
-        };
+            return "MEETING JETZT!";
+        }
+
+        if (remainingSeconds < 60)
+        {
+            return remainingSeconds == 1 ? "MEETING IN 1 SEKUNDE!" : $"MEETING IN {remainingSeconds} SEKUNDEN!";
+        }
+
+        var minutes = (int)Math.Round(remainingSeconds / 60.0, MidpointRounding.AwayFromZero);
+        return minutes == 1 ? "MEETING IN 1 MINUTE!" : $"MEETING IN {minutes} MINUTEN!";
     }
 
     private Label CreateLabel(string text, float fontSize, FontStyle style) => new()
