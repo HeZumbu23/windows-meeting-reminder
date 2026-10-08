@@ -109,7 +109,7 @@ public sealed class EditMeetingsForm : Form
         {
             Text = "Wochentag, Uhrzeit, Rhythmus und Titel eintragen. Bei \"Alle 2 Wochen\" zusätzlich das erste " +
                    "Datum (TT.MM.JJJJ) eintragen - der Wochentag wird dann daraus übernommen. Leere Zeile am " +
-                   "Ende = neuer Termin.",
+                   "Ende = neuer Termin. Zeile markieren und \"Zeile löschen\" entfernt einen Termin.",
             Dock = DockStyle.Top,
             Height = 46,
             Padding = new Padding(8, 8, 8, 0),
@@ -117,12 +117,14 @@ public sealed class EditMeetingsForm : Form
 
         var saveButton = new Button { Text = "Speichern", Width = 100 };
         var cancelButton = new Button { Text = "Abbrechen", Width = 100 };
+        var deleteButton = new Button { Text = "Zeile löschen", Width = 120, Margin = new Padding(24, 3, 3, 3) };
         saveButton.Click += (_, _) => TrySave();
         cancelButton.Click += (_, _) =>
         {
             DialogResult = DialogResult.Cancel;
             Close();
         };
+        deleteButton.Click += (_, _) => DeleteSelectedRows();
 
         var buttonPanel = new FlowLayoutPanel
         {
@@ -133,6 +135,7 @@ public sealed class EditMeetingsForm : Form
         };
         buttonPanel.Controls.Add(cancelButton);
         buttonPanel.Controls.Add(saveButton);
+        buttonPanel.Controls.Add(deleteButton);
 
         Controls.Add(_grid);
         Controls.Add(buttonPanel);
@@ -195,6 +198,35 @@ public sealed class EditMeetingsForm : Form
         SavedMeetings = result;
         DialogResult = DialogResult.OK;
         Close();
+    }
+
+    /// <summary>
+    /// Löscht alle Zeilen, in denen gerade mindestens eine Zelle markiert ist. Nötig, weil
+    /// RowHeadersVisible bewusst aus ist (schlankere Optik) - das eingebaute "ganze Zeile per
+    /// Zeilenkopf markieren + Entf" funktioniert ohne sichtbaren Zeilenkopf nicht.
+    /// </summary>
+    private void DeleteSelectedRows()
+    {
+        var rowsToRemove = _grid.SelectedCells
+            .Cast<DataGridViewCell>()
+            .Select(cell => cell.OwningRow)
+            .Where(row => row is { IsNewRow: false })
+            .Distinct()
+            .ToList();
+
+        if (rowsToRemove.Count == 0)
+        {
+            ShowError("Bitte zuerst eine Zeile (oder eine Zelle darin) in der Tabelle auswählen.");
+            return;
+        }
+
+        foreach (var row in rowsToRemove)
+        {
+            if (row!.DataBoundItem is MeetingRow meetingRow)
+            {
+                _rows.Remove(meetingRow);
+            }
+        }
     }
 
     /// <summary>0 = Montag ... 6 = Sonntag, damit die Terminliste in gewohnter Wochenreihenfolge sortiert.</summary>

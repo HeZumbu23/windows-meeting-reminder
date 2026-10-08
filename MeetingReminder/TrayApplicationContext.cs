@@ -16,11 +16,13 @@ public sealed class TrayApplicationContext : ApplicationContext
 {
     private readonly NotifyIcon _trayIcon;
     private readonly MeetingStore _store;
+    private readonly SettingsStore _settingsStore;
     private readonly ReminderScheduler _scheduler;
     private readonly ToolStripMenuItem _autostartMenuItem;
-    private readonly Queue<IReadOnlyList<Meeting>> _pendingPopups = new();
+    private readonly Queue<DueReminder> _pendingPopups = new();
 
     private List<Meeting> _meetings;
+    private ReminderSettings _settings;
     private ReminderPopupForm? _activePopup;
     private bool _isExiting;
 
@@ -29,11 +31,17 @@ public sealed class TrayApplicationContext : ApplicationContext
         _store = new MeetingStore();
         _meetings = _store.Load();
 
+        _settingsStore = new SettingsStore();
+        _settings = _settingsStore.Load();
+
         var editMenuItem = new ToolStripMenuItem("Termine bearbeiten...");
         editMenuItem.Click += (_, _) => EditMeetings();
 
         var openFileMenuItem = new ToolStripMenuItem("Termindatei im Explorer anzeigen");
         openFileMenuItem.Click += (_, _) => OpenDataFileLocation();
+
+        var settingsMenuItem = new ToolStripMenuItem("Einstellungen...");
+        settingsMenuItem.Click += (_, _) => EditSettings();
 
         _autostartMenuItem = new ToolStripMenuItem("Automatisch mit Windows starten")
         {
@@ -48,6 +56,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         var menu = new ContextMenuStrip();
         menu.Items.Add(editMenuItem);
         menu.Items.Add(openFileMenuItem);
+        menu.Items.Add(settingsMenuItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_autostartMenuItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -62,14 +71,14 @@ public sealed class TrayApplicationContext : ApplicationContext
         };
         _trayIcon.DoubleClick += (_, _) => EditMeetings();
 
-        _scheduler = new ReminderScheduler(() => _meetings);
-        _scheduler.MeetingsDue += OnMeetingsDue;
+        _scheduler = new ReminderScheduler(() => _meetings, () => _settings);
+        _scheduler.ReminderDue += OnReminderDue;
         _scheduler.Start();
     }
 
-    private void OnMeetingsDue(object? sender, IReadOnlyList<Meeting> dueMeetings)
+    private void OnReminderDue(object? sender, DueReminder due)
     {
-        _pendingPopups.Enqueue(dueMeetings);
+        _pendingPopups.Enqueue(due);
         ShowNextPopupIfIdle();
     }
 
@@ -80,15 +89,15 @@ public sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
-        var dueMeetings = _pendingPopups.Dequeue();
-        var popup = new ReminderPopupForm(dueMeetings);
+        var due = _pendingPopups.Dequeue();
+        var popup = new ReminderPopupForm(due.Meetings, due.Stage);
         _activePopup = popup;
 
         popup.FormClosed += (_, _) =>
         {
             if (popup.SnoozeRequested)
             {
-                _scheduler.Snooze(dueMeetings, TimeSpan.FromMinutes(5));
+                _scheduler.Snooze(due.Meetings, TimeSpan.FromMinutes(5));
             }
 
             popup.Dispose();
@@ -107,6 +116,16 @@ public sealed class TrayApplicationContext : ApplicationContext
         {
             _meetings = form.SavedMeetings;
             _store.Save(_meetings);
+        }
+    }
+
+    private void EditSettings()
+    {
+        using var form = new SettingsForm(_settings);
+        if (form.ShowDialog() == DialogResult.OK && form.SavedSettings is not null)
+        {
+            _settings = form.SavedSettings;
+            _settingsStore.Save(_settings);
         }
     }
 
