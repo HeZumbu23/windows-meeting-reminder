@@ -55,6 +55,7 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
 
 ```
 MeetingReminder.sln
+deploy.ps1                     Baut/startet neu, sobald neue Commits landen (siehe "Deploy-Skript")
 MeetingReminder/
   MeetingReminder.csproj       Projektdatei (.NET 8, WinForms, net8.0-windows)
   meetings.json                 Terminplan (eingecheckt, siehe "Termine anpassen")
@@ -120,11 +121,14 @@ Zum Beenden während der Entwicklung:
 
 ## Veröffentlichen als eigenständige .exe
 
-Für eine einzelne, verteilbare .exe ohne separat installiertes .NET:
+Einzelne, eigenständige .exe-Datei (self-contained, single-file, win-x64)
+ohne separat installiertes .NET - die nötigen Eigenschaften dafür
+(`RuntimeIdentifier`, `SelfContained`, `PublishSingleFile`,
+`IncludeNativeLibrariesForSelfExtract`) sind fest in
+`MeetingReminder.csproj` hinterlegt, ein normales Publish reicht:
 
 ```powershell
-dotnet publish MeetingReminder -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish MeetingReminder -c Release
 ```
 
 Die fertige Datei liegt danach unter
@@ -141,6 +145,28 @@ neben sich selbst ab - dann eben nicht mehr eingecheckt, sondern wie eine
 normale lokale Konfigurationsdatei. Für den eingecheckten Terminplan die App
 also direkt aus dem Repository-Checkout heraus bauen/starten (`dotnet run`
 bzw. die .exe aus `bin\...\` heraus), nicht an einen anderen Ort kopieren.
+
+### Deploy-Skript
+
+Für die lokale Entwicklung: `deploy.ps1` (im Repository-Wurzelverzeichnis,
+gleiches Muster wie im Schwester-Repo
+[taskbarlauncher](https://github.com/HeZumbu23/taskbarlauncher)) baut und
+startet einmal sofort, beobachtet danach den aktuellen Branch und
+deployt automatisch neu, sobald neue Commits landen - kein manuelles
+"pull, neu bauen, neu starten" mehr nötig.
+
+```powershell
+.\deploy.ps1                      # beobachten, alle 60s prüfen (Standard)
+.\deploy.ps1 -IntervalSeconds 15  # öfter prüfen
+.\deploy.ps1 -Once                # einmal sofort deployen, ohne Beobachtungsschleife
+```
+
+Bei jedem Intervall wird nur `git fetch` ausgeführt; erst wenn der
+Remote-Branch wirklich neue Commits hat, wird die laufende Instanz beendet
+(`Stop-Process -Force`, kein sauberes "Beenden" über das Tray-Menü - wie im
+Original), `git pull` + `dotnet publish MeetingReminder -c Release`
+ausgeführt und die neue .exe gestartet. Ohne neue Commits passiert beim
+Intervall nichts. Mit Strg+C beenden.
 
 ## Termine anpassen
 
@@ -230,6 +256,15 @@ den größeren Wert hat (standardmäßig grün 300s vor rot 30s).
   Vorlaufzeiten (z.B. 30s vs. 5min) sauber feuern. Ein Snooze re-feuert
   immer als rote (dringliche) Erinnerung, unabhängig davon, welche Stufe ihn
   ausgelöst hat.
+- **`deploy.ps1` 1:1 vom Schwester-Repo
+  [taskbarlauncher](https://github.com/HeZumbu23/taskbarlauncher) übernommen**
+  (nur Prozess-/Exe-Name und Publish-Pfad angepasst), damit beide Projekte
+  denselben Entwickler-Workflow benutzen. Damit `dotnet publish
+  MeetingReminder -c Release` ohne zusätzliche `-p:`-Flags dieselbe
+  self-contained single-file .exe erzeugt, die das Skript erwartet, sind
+  `RuntimeIdentifier`/`SelfContained`/`PublishSingleFile`/
+  `IncludeNativeLibrariesForSelfExtract` jetzt fest in
+  `MeetingReminder.csproj` hinterlegt statt nur als CLI-Flags dokumentiert.
 - Die alte PowerShell/Aufgabenplanung-Lösung (`meetings.csv`, `reminder.ps1`,
   `setup_task.ps1`, `remove_task.ps1`) ist **nicht** Teil dieses Repos – das
   Repository war zu Beginn dieser Aufgabe leer, es gab daher nichts zu
