@@ -12,6 +12,12 @@
     <ApplicationIcon>AppIcon.ico</ApplicationIcon>
     <InvariantGlobalization>true</InvariantGlobalization>
     <NeutralLanguage>de-DE</NeutralLanguage>
+
+    <!-- Einzelne, eigenständige .exe ohne separat installiertes .NET -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
 </Project>
