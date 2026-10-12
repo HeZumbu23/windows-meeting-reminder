@@ -42,7 +42,12 @@ geplante Aufgabe, kein sichtbares Hauptfenster im Normalbetrieb.
   Vorlaufzeit), damit ein Termin auch nach einer kurzen Standby-Phase noch
   zuverlässig gemeldet wird. Es werden keine anwachsenden Datenstrukturen
   gehalten (pro Tag zurückgesetzte "bereits ausgelöst"-Liste je Stufe),
-  damit die App auch über Tage hinweg ohne Speicherzuwachs läuft.
+  damit die App auch über Tage hinweg ohne Speicherzuwachs läuft. Diese
+  Liste wird zusätzlich unter
+  `%LocalAppData%\MeetingReminder\fired-reminders.json` gesichert (nicht im
+  Repo), damit ein Neustart der App - Autostart, Absturz, Neu-Deploy - eine
+  bereits gezeigte und weggeklickte Erinnerung nicht innerhalb der
+  Gnadenfrist noch einmal zeigt.
 - **Eine Instanz gleichzeitig**: Ein zweiter Start (z.B. durch Autostart und
   manuellen Doppelklick) zeigt nur einen Hinweis und beendet sich sofort.
 - **Sauberes Beenden**: "Beenden" im Tray-Menü entfernt das Icon und stoppt
@@ -71,6 +76,7 @@ MeetingReminder/
   Services/SettingsStore.cs      Laden/Speichern der settings.json
   Services/DataDirectoryResolver.cs Gemeinsame Pfadsuche für beide Stores
   Services/ReminderScheduler.cs  Polling-Timer, Fälligkeitsprüfung je Stufe, Snooze
+  Services/FiredReminderStore.cs Merkt gezeigte Erinnerungen über Neustarts (%LocalAppData%)
   Services/AutostartManager.cs  Registry-Autostart an/aus
   Services/TrayIconFactory.cs   Zeichnet das Tray-Icon zur Laufzeit
   Native/NativeMethods.cs       DestroyIcon-Interop (verhindert Handle-Leak)
@@ -162,11 +168,15 @@ deployt automatisch neu, sobald neue Commits landen - kein manuelles
 ```
 
 Bei jedem Intervall wird nur `git fetch` ausgeführt; erst wenn der
-Remote-Branch wirklich neue Commits hat, wird die laufende Instanz beendet
-(`Stop-Process -Force`, kein sauberes "Beenden" über das Tray-Menü - wie im
-Original), `git pull` + `dotnet publish MeetingReminder -c Release`
-ausgeführt und die neue .exe gestartet. Ohne neue Commits passiert beim
-Intervall nichts. Mit Strg+C beenden.
+Remote-Branch Commits hat, die lokal fehlen (`git rev-list --count
+HEAD..origin/<branch>` > 0), wird `git pull` ausgeführt, danach die laufende
+Instanz beendet (`Stop-Process -Force`, kein sauberes "Beenden" über das
+Tray-Menü), `dotnet publish MeetingReminder -c Release` ausgeführt und die
+neue .exe gestartet. Ohne neue Remote-Commits passiert beim Intervall
+nichts - auch dann nicht, wenn der lokale Branch nur *voraus* ist
+(unveröffentlichter Commit). Scheitert der Pull (z.B. weil lokal bearbeitete
+`meetings.json` mit eingehenden Änderungen kollidiert), läuft die App
+unverändert weiter. Mit Strg+C beenden.
 
 ## Termine anpassen
 
@@ -256,10 +266,13 @@ den größeren Wert hat (standardmäßig grün 300s vor rot 30s).
   Vorlaufzeiten (z.B. 30s vs. 5min) sauber feuern. Ein Snooze re-feuert
   immer als rote (dringliche) Erinnerung, unabhängig davon, welche Stufe ihn
   ausgelöst hat.
-- **`deploy.ps1` 1:1 vom Schwester-Repo
+- **`deploy.ps1` vom Schwester-Repo
   [taskbarlauncher](https://github.com/HeZumbu23/taskbarlauncher) übernommen**
-  (nur Prozess-/Exe-Name und Publish-Pfad angepasst), damit beide Projekte
-  denselben Entwickler-Workflow benutzen. Damit `dotnet publish
+  (Prozess-/Exe-Name und Publish-Pfad angepasst; zusätzlich "erst pullen,
+  dann stoppen" und "nur bei Remote-Commits, die lokal fehlen" statt
+  "Hashes ungleich" - letzteres löste bei unveröffentlichten lokalen Commits
+  endlos Neustarts im Minutentakt aus, und jeder Neustart zeigte
+  Erinnerungen erneut). Damit `dotnet publish
   MeetingReminder -c Release` ohne zusätzliche `-p:`-Flags dieselbe
   self-contained single-file .exe erzeugt, die das Skript erwartet, sind
   `RuntimeIdentifier`/`SelfContained`/`PublishSingleFile`/

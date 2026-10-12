@@ -24,15 +24,20 @@ public sealed class ReminderScheduler
 
     private readonly Func<List<Meeting>> _meetingsProvider;
     private readonly Func<ReminderSettings> _settingsProvider;
+    private readonly FiredReminderStore _firedStore;
     private readonly System.Windows.Forms.Timer _timer;
     private readonly HashSet<string> _firedToday = new();
     private readonly List<SnoozedReminder> _snoozed = new();
     private DateTime _lastCheckedDate = DateTime.MinValue;
 
-    public ReminderScheduler(Func<List<Meeting>> meetingsProvider, Func<ReminderSettings> settingsProvider)
+    public ReminderScheduler(
+        Func<List<Meeting>> meetingsProvider,
+        Func<ReminderSettings> settingsProvider,
+        FiredReminderStore firedStore)
     {
         _meetingsProvider = meetingsProvider;
         _settingsProvider = settingsProvider;
+        _firedStore = firedStore;
         _timer = new System.Windows.Forms.Timer { Interval = (int)CheckInterval.TotalMilliseconds };
         _timer.Tick += (_, _) => Check();
     }
@@ -42,6 +47,7 @@ public sealed class ReminderScheduler
     public void Start()
     {
         _lastCheckedDate = DateTime.Now.Date;
+        _firedToday.UnionWith(_firedStore.Load(DateOnly.FromDateTime(_lastCheckedDate)));
         Check();
         _timer.Start();
     }
@@ -86,6 +92,7 @@ public sealed class ReminderScheduler
         }
 
         var settings = _settingsProvider();
+        var firedCountBefore = _firedToday.Count;
 
         foreach (var meeting in _meetingsProvider())
         {
@@ -112,6 +119,12 @@ public sealed class ReminderScheduler
             }
         }
 
+        // Vor dem Anzeigen sichern, damit auch ein Absturz/Neustart direkt danach nichts erneut zeigt.
+        if (_firedToday.Count != firedCountBefore)
+        {
+            _firedStore.Save(DateOnly.FromDateTime(now), _firedToday);
+        }
+
         if (dueGreen.Count > 0)
         {
             ReminderDue?.Invoke(this, new DueReminder(dueGreen, ReminderStage.Green));
@@ -125,6 +138,11 @@ public sealed class ReminderScheduler
 
     private bool IsDueForStage(Meeting meeting, DateTime scheduledAt, TimeSpan lead, ReminderStage stage, DateTime now)
     {
+        if (lead <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
         var reminderAt = scheduledAt - lead;
         if (now < reminderAt || now > reminderAt + GraceWindow)
         {
