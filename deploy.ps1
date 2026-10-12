@@ -4,9 +4,10 @@
 .DESCRIPTION
     Deploys immediately once on startup, then watches: every
     -IntervalSeconds (default 60), fetches from origin. Only when the
-    remote branch actually has new commits does it stop the running
-    instance, pull, rebuild (Release), and relaunch - an unchanged remote
-    is a silent no-op. Press Ctrl+C to stop watching.
+    remote branch actually has commits the local branch lacks does it pull,
+    stop the running instance, rebuild (Release), and relaunch - an
+    unchanged remote (or a local branch that is merely ahead) is a silent
+    no-op. Press Ctrl+C to stop watching.
 .PARAMETER IntervalSeconds
     How often to check for new commits, in seconds. Default: 60.
 .PARAMETER Once
@@ -33,6 +34,16 @@ function Write-Command([string]$Text) {
 }
 
 function Invoke-Deploy {
+    # Pull first: if it fails (e.g. local edits to meetings.json collide with
+    # incoming changes), the running instance is left untouched instead of
+    # being stopped and never restarted.
+    Write-Step "Pulling latest changes"
+    Write-Command "git pull"
+    git pull
+    if ($LASTEXITCODE -ne 0) {
+        throw "git pull failed (exit code $LASTEXITCODE)."
+    }
+
     Write-Step "Stopping running instance (if any)"
     $proc = Get-Process -Name "MeetingReminder" -ErrorAction SilentlyContinue
     if ($proc) {
@@ -45,13 +56,6 @@ function Invoke-Deploy {
     }
     else {
         Write-Host "No running instance found."
-    }
-
-    Write-Step "Pulling latest changes"
-    Write-Command "git pull"
-    git pull
-    if ($LASTEXITCODE -ne 0) {
-        throw "git pull failed (exit code $LASTEXITCODE)."
     }
 
     Write-Step "Building Release"
@@ -95,14 +99,18 @@ while ($true) {
         Write-Host "git fetch failed (exit code $LASTEXITCODE) - will retry next interval." -ForegroundColor Red
     }
     else {
-        Write-Command "git rev-parse HEAD"
-        $localHash = (git rev-parse HEAD).Trim()
-        Write-Command "git rev-parse origin/$branch"
-        $remoteHash = (git rev-parse "origin/$branch").Trim()
+        # Count commits the remote has that HEAD lacks. Comparing the two
+        # hashes for inequality instead would also fire when the local branch
+        # is merely *ahead* (unpushed commit) - which never resolves by
+        # pulling and would redeploy (= restart the app) every interval.
+        Write-Command "git rev-list --count HEAD..origin/$branch"
+        $behind = [int](git rev-list --count "HEAD..origin/$branch")
 
-        if ($localHash -ne $remoteHash) {
+        if ($behind -gt 0) {
+            $localHash = (git rev-parse HEAD).Trim()
+            $remoteHash = (git rev-parse "origin/$branch").Trim()
             Write-Host ""
-            Write-Host "New commits detected: $($localHash.Substring(0,7)) -> $($remoteHash.Substring(0,7))" -ForegroundColor Yellow
+            Write-Host "New commits detected ($behind): $($localHash.Substring(0,7)) -> $($remoteHash.Substring(0,7))" -ForegroundColor Yellow
             try {
                 Invoke-Deploy
             }

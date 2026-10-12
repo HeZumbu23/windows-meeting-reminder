@@ -71,7 +71,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         };
         _trayIcon.DoubleClick += (_, _) => EditMeetings();
 
-        _scheduler = new ReminderScheduler(() => _meetings, () => _settings);
+        _scheduler = new ReminderScheduler(() => _meetings, () => _settings, new FiredReminderStore());
         _scheduler.ReminderDue += OnReminderDue;
         _scheduler.Start();
     }
